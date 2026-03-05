@@ -1,5 +1,6 @@
 import os
 import uuid
+import json
 import pandas as pd
 from fastapi import FastAPI, File, UploadFile, Form, Request
 from fastapi.responses import HTMLResponse
@@ -51,7 +52,60 @@ async def sheet_info(
 
     return templates.TemplateResponse("partials/sheet_info.html", {
         "request": request,
+        "saved_path": saved_path,
         "sheet_name": sheet_name,
         "columns": columns,
         "row_count": row_count,
+    })
+
+
+@app.get("/clear-filters", response_class=HTMLResponse)
+async def clear_filters():
+    return ""
+
+
+@app.post("/filter", response_class=HTMLResponse)
+async def filter_rows(
+    request: Request,
+    saved_path: str = Form(...),
+    sheet_name: str = Form(...),
+    filters: str = Form("[]"),
+    col: str = Form(...),
+    operator: str = Form(...),
+    value: str = Form(...),
+):
+    active_filters = json.loads(filters)
+    active_filters.append({"col": col, "op": operator, "val": value})
+
+    df = pd.read_excel(saved_path, sheet_name=sheet_name)
+    all_columns = df.columns.tolist()
+
+    for f in active_filters:
+        col_data = df[f["col"]]
+        val = f["val"]
+        op = f["op"]
+        if op == "=":
+            df = df[col_data.astype(str) == val]
+        elif op == "!=":
+            df = df[col_data.astype(str) != val]
+        elif op == "contains":
+            df = df[col_data.astype(str).str.contains(val, case=False, na=False)]
+        elif op == ">":
+            df = df[pd.to_numeric(col_data, errors="coerce") > float(val)]
+        elif op == ">=":
+            df = df[pd.to_numeric(col_data, errors="coerce") >= float(val)]
+        elif op == "<":
+            df = df[pd.to_numeric(col_data, errors="coerce") < float(val)]
+        elif op == "<=":
+            df = df[pd.to_numeric(col_data, errors="coerce") <= float(val)]
+
+    return templates.TemplateResponse("partials/filter_results.html", {
+        "request": request,
+        "saved_path": saved_path,
+        "sheet_name": sheet_name,
+        "columns": all_columns,
+        "active_filters": active_filters,
+        "filters_json": json.dumps(active_filters),
+        "rows": df.to_dict(orient="records"),
+        "row_count": len(df),
     })

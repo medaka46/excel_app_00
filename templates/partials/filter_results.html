@@ -1,24 +1,56 @@
+<!-- Active Filters -->
+<div class="mb-3">
+  <strong>Active filters:</strong>
+  {% for f in active_filters %}
+  <span class="badge bg-secondary me-1">{{ f.col }} {{ f.op }} {{ f.val }}</span>
+  {% endfor %}
+  <button
+    class="btn btn-sm btn-outline-danger ms-2"
+    hx-get="/clear-filters"
+    hx-target="#results-section"
+    hx-swap="innerHTML"
+  >Clear all</button>
+</div>
+
+<!-- Results Table -->
 <div class="card mb-4">
-  <div class="card-header fw-semibold">Sheet Info: {{ sheet_name }}</div>
-  <div class="card-body">
-    <p class="mb-2"><strong>Rows:</strong> {{ row_count }}</p>
-    <p class="mb-2"><strong>Columns ({{ columns | length }}):</strong></p>
-    <ul class="list-group list-group-flush mb-3">
-      {% for col in columns %}
-      <li class="list-group-item py-1">{{ loop.index }}. {{ col }}</li>
-      {% endfor %}
-    </ul>
+  <div class="card-header fw-semibold">Results: {{ row_count }} row(s)</div>
+  <div class="card-body p-0">
+    {% if rows %}
+    <div class="table-responsive">
+      <table class="table table-striped table-hover mb-0">
+        <thead class="table-dark">
+          <tr>
+            {% for col in columns %}
+            <th>{{ col }}</th>
+            {% endfor %}
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in rows %}
+          <tr>
+            {% for col in columns %}
+            <td>{{ row[col] }}</td>
+            {% endfor %}
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <p class="p-3 mb-0 text-muted">No rows match the current filters.</p>
+    {% endif %}
   </div>
 </div>
 
-<!-- Filter Form -->
+<!-- Next Filter Form -->
 <div class="card mb-4">
-  <div class="card-header fw-semibold">Filter Rows</div>
+  <div class="card-header fw-semibold">Add Another Filter</div>
   <div class="card-body">
     <form hx-post="/filter" hx-target="#results-section" hx-swap="innerHTML">
       <input type="hidden" name="saved_path" value="{{ saved_path }}">
       <input type="hidden" name="sheet_name" value="{{ sheet_name }}">
-      <input type="hidden" name="filters" value="[]">
+      <input type="hidden" name="filters" value="{{ filters_json }}">
       <div class="row g-2 align-items-end">
         <div class="col-md-4">
           <label class="form-label mb-1">Column</label>
@@ -51,5 +83,3 @@
     </form>
   </div>
 </div>
-
-<div id="results-section"></div>

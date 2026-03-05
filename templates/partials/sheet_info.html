@@ -1,0 +1,12 @@
+<div class="card">
+  <div class="card-header fw-semibold">Sheet Info: {{ sheet_name }}</div>
+  <div class="card-body">
+    <p class="mb-2"><strong>Rows:</strong> {{ row_count }}</p>
+    <p class="mb-2"><strong>Columns ({{ columns | length }}):</strong></p>
+    <ul class="list-group list-group-flush">
+      {% for col in columns %}
+      <li class="list-group-item py-1">{{ loop.index }}. {{ col }}</li>
+      {% endfor %}
+    </ul>
+  </div>
+</div>

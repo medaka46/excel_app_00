@@ -1,0 +1,26 @@
+<div class="card mb-4">
+  <div class="card-header fw-semibold">Step 2: Select a Sheet</div>
+  <div class="card-body">
+    <form
+      hx-post="/sheet-info"
+      hx-target="#info-section"
+      hx-swap="innerHTML"
+      hx-trigger="change"
+    >
+      <input type="hidden" name="saved_path" value="{{ saved_path }}">
+      {% for name in sheet_names %}
+      <div class="form-check">
+        <input
+          class="form-check-input"
+          type="radio"
+          name="sheet_name"
+          id="sheet_{{ loop.index }}"
+          value="{{ name }}"
+          {% if loop.first %}checked{% endif %}
+        >
+        <label class="form-check-label" for="sheet_{{ loop.index }}">{{ name }}</label>
+      </div>
+      {% endfor %}
+    </form>
+  </div>
+</div>

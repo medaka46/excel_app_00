@@ -5,11 +5,28 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Excel Data App</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    body {
+      color: #0f0 !important;
+    }
+  </style>
   <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+  <script>
+    (function() {
+      const theme = localStorage.getItem('theme') || 'light';
+      document.documentElement.setAttribute('data-bs-theme', theme);
+    })();
+  </script>
 </head>
-<body class="bg-light">
-  <div class="container py-5" style="max-width: 800px;">
-    <h1 class="mb-4">Excel Data App</h1>
+<body>
+  <div class="container py-5" style="max-width: 1600px;">
+  <!-- <div class="container py-5" style="max-width: 800px;"> -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+      <h1 class="mb-0">Excel Data App</h1>
+      <button id="theme-toggle" class="btn btn-outline-secondary" onclick="toggleTheme()">
+        <span id="theme-icon"></span>
+      </button>
+    </div>
 
     <!-- Upload Form -->
     <div class="card mb-4">
@@ -29,11 +46,43 @@
       </div>
     </div>
 
+    <!-- Load Bundled Excel File -->
+    <div class="card mb-4">
+      <div class="card-header fw-semibold">Step 1 (Alternative): Load Included Excel File</div>
+      <div class="card-body">
+        <button
+          class="btn btn-outline-primary"
+          hx-get="/load-sample"
+          hx-target="#sheet-section"
+          hx-swap="innerHTML"
+        >
+          Load project_Max_data_20240826_14.xlsx
+        </button>
+        <div class="form-text mt-2">
+          This loads the Excel file already in <code>excel_app_00/</code> without uploading.
+        </div>
+      </div>
+    </div>
+
     <!-- Sheet Selector (filled by HTMX) -->
     <div id="sheet-section"></div>
 
     <!-- Sheet Info (filled by HTMX) -->
     <div id="info-section"></div>
   </div>
+  <script>
+    function toggleTheme() {
+      const html = document.documentElement;
+      const current = html.getAttribute('data-bs-theme');
+      const next = current === 'dark' ? 'light' : 'dark';
+      html.setAttribute('data-bs-theme', next);
+      localStorage.setItem('theme', next);
+      document.getElementById('theme-icon').textContent = next === 'dark' ? '\u2600\ufe0f' : '\ud83c\udf19';
+    }
+    (function() {
+      const saved = localStorage.getItem('theme') || 'light';
+      document.getElementById('theme-icon').textContent = saved === 'dark' ? '\u2600\ufe0f' : '\ud83c\udf19';
+    })();
+  </script>
 </body>
 </html>

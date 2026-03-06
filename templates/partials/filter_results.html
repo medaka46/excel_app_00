@@ -22,7 +22,7 @@
         <thead class="table-dark">
           <tr>
             {% for col in columns %}
-            <th>{{ col }}</th>
+            <th style="color: #0f0 !important;">{{ col }}</th>
             {% endfor %}
           </tr>
         </thead>
@@ -30,7 +30,7 @@
           {% for row in rows %}
           <tr>
             {% for col in columns %}
-            <td>{{ row[col] }}</td>
+            <td style="color: #0f0 !important;">{{ row[col] }}</td>
             {% endfor %}
           </tr>
           {% endfor %}

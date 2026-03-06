@@ -5,7 +5,7 @@
       hx-post="/sheet-info"
       hx-target="#info-section"
       hx-swap="innerHTML"
-      hx-trigger="change"
+      hx-trigger="load,change"
     >
       <input type="hidden" name="saved_path" value="{{ saved_path }}">
       {% for name in sheet_names %}

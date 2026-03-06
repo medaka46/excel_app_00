@@ -2,8 +2,9 @@ import os
 import uuid
 import json
 import pandas as pd
-from fastapi import FastAPI, File, UploadFile, Form, Request
-from fastapi.responses import HTMLResponse
+from datetime import date, datetime
+from fastapi import FastAPI, File, UploadFile, Form, Request, HTTPException, Query
+from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
 
 app = FastAPI()
@@ -11,6 +12,51 @@ templates = Jinja2Templates(directory="templates")
 
 UPLOAD_DIR = "uploads"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
+
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+SAMPLE_XLSX = os.path.join(BASE_DIR, "project_Max_data_20240826_14.xlsx")
+
+
+def _safe_excel_path(path: str) -> str:
+    """
+    Allow reading Excel files only from:
+    - this app directory (for bundled sample files)
+    - uploads directory (for user uploads)
+    """
+    if not path:
+        raise HTTPException(status_code=400, detail="Missing path")
+
+    abs_path = os.path.abspath(path)
+    allowed_roots = [
+        os.path.abspath(BASE_DIR),
+        os.path.abspath(os.path.join(BASE_DIR, UPLOAD_DIR)),
+    ]
+    if not any(abs_path == r or abs_path.startswith(r + os.sep) for r in allowed_roots):
+        raise HTTPException(status_code=400, detail="Path is not allowed")
+    if not os.path.exists(abs_path):
+        raise HTTPException(status_code=404, detail="Excel file not found")
+    if not abs_path.lower().endswith((".xlsx", ".xls")):
+        raise HTTPException(status_code=400, detail="Only .xlsx/.xls files are supported")
+    return abs_path
+
+
+def _json_safe(value):
+    if value is None:
+        return None
+    if isinstance(value, (datetime, date)):
+        return value.isoformat()
+    # pandas Timestamp inherits datetime, but keep explicit for clarity
+    if isinstance(value, pd.Timestamp):
+        return value.isoformat()
+    return value
+
+
+def _df_to_json_rows(df: pd.DataFrame) -> list[dict]:
+    # Convert pandas missing values (NaN/pd.NA) to None (valid JSON null)
+    df_obj = df.astype(object).where(pd.notna(df), None)
+    rows = df_obj.to_dict(orient="records")
+    # Ensure datetime-like values are JSON-friendly strings
+    return [{k: _json_safe(v) for k, v in row.items()} for row in rows]
 
 
 @app.get("/", response_class=HTMLResponse)
@@ -30,6 +76,19 @@ async def upload(request: Request, file: UploadFile = File(...)):
         f.write(content)
 
     # Read sheet names
+    xf = pd.ExcelFile(_safe_excel_path(saved_path))
+    sheet_names = xf.sheet_names
+
+    return templates.TemplateResponse("partials/sheet_selector.html", {
+        "request": request,
+        "sheet_names": sheet_names,
+        "saved_path": _safe_excel_path(saved_path),
+    })
+
+
+@app.get("/load-sample", response_class=HTMLResponse)
+async def load_sample(request: Request):
+    saved_path = _safe_excel_path(SAMPLE_XLSX)
     xf = pd.ExcelFile(saved_path)
     sheet_names = xf.sheet_names
 
@@ -46,13 +105,13 @@ async def sheet_info(
     sheet_name: str = Form(...),
     saved_path: str = Form(...),
 ):
-    df = pd.read_excel(saved_path, sheet_name=sheet_name)
+    df = pd.read_excel(_safe_excel_path(saved_path), sheet_name=sheet_name)
     columns = df.columns.tolist()
     row_count = len(df)
 
     return templates.TemplateResponse("partials/sheet_info.html", {
         "request": request,
-        "saved_path": saved_path,
+        "saved_path": _safe_excel_path(saved_path),
         "sheet_name": sheet_name,
         "columns": columns,
         "row_count": row_count,
@@ -77,7 +136,7 @@ async def filter_rows(
     active_filters = json.loads(filters)
     active_filters.append({"col": col, "op": operator, "val": value})
 
-    df = pd.read_excel(saved_path, sheet_name=sheet_name)
+    df = pd.read_excel(_safe_excel_path(saved_path), sheet_name=sheet_name)
     all_columns = df.columns.tolist()
 
     for f in active_filters:
@@ -101,7 +160,7 @@ async def filter_rows(
 
     return templates.TemplateResponse("partials/filter_results.html", {
         "request": request,
-        "saved_path": saved_path,
+        "saved_path": _safe_excel_path(saved_path),
         "sheet_name": sheet_name,
         "columns": all_columns,
         "active_filters": active_filters,
@@ -109,3 +168,27 @@ async def filter_rows(
         "rows": df.to_dict(orient="records"),
         "row_count": len(df),
     })
+
+
+@app.get("/api/sample/sheets", response_class=JSONResponse)
+async def api_sample_sheets():
+    saved_path = _safe_excel_path(SAMPLE_XLSX)
+    xf = pd.ExcelFile(saved_path)
+    return {"file": os.path.basename(saved_path), "path": saved_path, "sheets": xf.sheet_names}
+
+
+@app.get("/api/sample/sheet", response_class=JSONResponse)
+async def api_sample_sheet(
+    sheet_name: str = Query(...),
+    limit: int = Query(200, ge=1, le=5000),
+):
+    saved_path = _safe_excel_path(SAMPLE_XLSX)
+    df = pd.read_excel(saved_path, sheet_name=sheet_name)
+    df = df.head(limit)
+    return {
+        "file": os.path.basename(saved_path),
+        "sheet": sheet_name,
+        "columns": df.columns.tolist(),
+        "row_count": int(len(df)),
+        "rows": _df_to_json_rows(df),
+    }

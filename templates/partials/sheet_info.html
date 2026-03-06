@@ -5,7 +5,7 @@
     <p class="mb-2"><strong>Columns ({{ columns | length }}):</strong></p>
     <ul class="list-group list-group-flush mb-3">
       {% for col in columns %}
-      <li class="list-group-item py-1">{{ loop.index }}. {{ col }}</li>
+      <li class="list-group-item py-1" style="color: #0f0 !important;">{{ loop.index }}. {{ col }}</li>
       {% endfor %}
     </ul>
   </div>

@@ -8,6 +8,7 @@
   <style>
     body {
       color: #0f0 !important;
+      font-size: 80% !important;
     }
     .card-header, .card-body, .card-body label,
     .card-body .form-text, .card-body code,
@@ -100,6 +101,36 @@
     <div id="info-section"></div>
   </div>
   <script>
+    function updateValueField(colSelect, wrapId, uniqueVals) {
+      var wrap = document.getElementById(wrapId);
+      if (!wrap) return;
+      var col = colSelect.value;
+      var label = wrap.querySelector('label');
+      var vals = uniqueVals[col];
+      wrap.innerHTML = '';
+      if (label) wrap.appendChild(label);
+      if (vals) {
+        var sel = document.createElement('select');
+        sel.className = 'form-select';
+        sel.name = 'value';
+        sel.required = true;
+        vals.forEach(function (v) {
+          var opt = document.createElement('option');
+          opt.value = v;
+          opt.textContent = v;
+          sel.appendChild(opt);
+        });
+        wrap.appendChild(sel);
+      } else {
+        var inp = document.createElement('input');
+        inp.className = 'form-control';
+        inp.type = 'text';
+        inp.name = 'value';
+        inp.required = true;
+        wrap.appendChild(inp);
+      }
+    }
+
     function makeProgress(wrapId, barId, pctId) {
       var timer = null, pct = 0;
       function setBar(p) {

@@ -108,6 +108,11 @@ async def sheet_info(
     df = pd.read_excel(_safe_excel_path(saved_path), sheet_name=sheet_name)
     columns = df.columns.tolist()
     row_count = len(df)
+    unique_vals = {
+        col: sorted(df[col].dropna().astype(str).unique().tolist())
+        for col in columns
+        if df[col].dropna().astype(str).nunique() <= 10
+    }
 
     return templates.TemplateResponse("partials/sheet_info.html", {
         "request": request,
@@ -115,6 +120,7 @@ async def sheet_info(
         "sheet_name": sheet_name,
         "columns": columns,
         "row_count": row_count,
+        "unique_vals": json.dumps(unique_vals),
     })
 
 
@@ -138,6 +144,11 @@ async def filter_rows(
 
     df = pd.read_excel(_safe_excel_path(saved_path), sheet_name=sheet_name)
     all_columns = df.columns.tolist()
+    unique_vals = {
+        col: sorted(df[col].dropna().astype(str).unique().tolist())
+        for col in all_columns
+        if df[col].dropna().astype(str).nunique() <= 10
+    }
 
     for f in active_filters:
         col_data = df[f["col"]]
@@ -165,6 +176,7 @@ async def filter_rows(
         "columns": all_columns,
         "active_filters": active_filters,
         "filters_json": json.dumps(active_filters),
+        "unique_vals": json.dumps(unique_vals),
         "rows": df.to_dict(orient="records"),
         "row_count": len(df),
     })

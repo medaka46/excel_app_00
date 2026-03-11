@@ -3,9 +3,12 @@
   <div class="card-body">
     <p class="mb-2"><strong>Rows:</strong> {{ row_count }}</p>
     <p class="mb-2"><strong>Columns ({{ columns | length }}):</strong></p>
-    <div class="row row-cols-5 g-1 mb-3">
+    <div class="row row-cols-10 g-1 mb-3">
       {% for col in columns %}
-      <div class="col" style="color: #0f0 !important;">{{ loop.index }}. {{ col }}</div>
+      <div class="col text-center" style="color: #0f0 !important;">
+        <div class="fw-bold">{{ loop.index }}</div>
+        <div>{{ col }}</div>
+      </div>
       {% endfor %}
     </div>
   </div>
@@ -22,7 +25,7 @@
       <div class="row g-2 align-items-end">
         <div class="col-md-4">
           <label class="form-label mb-1">Column</label>
-          <select class="form-select" name="col">
+          <select class="form-select" name="col" id="col-select-1" onchange="updateValueField(this, 'val-wrap-1', _uv1)">
             {% for col in columns %}
             <option value="{{ col }}">{{ col }}</option>
             {% endfor %}
@@ -40,7 +43,7 @@
             <option value="<=">&lt;=</option>
           </select>
         </div>
-        <div class="col-md-3">
+        <div class="col-md-3" id="val-wrap-1">
           <label class="form-label mb-1">Value</label>
           <input class="form-control" type="text" name="value" required>
         </div>
@@ -49,6 +52,13 @@
         </div>
       </div>
     </form>
+    <script>
+      var _uv1 = {{ unique_vals | tojson }};
+      (function () {
+        var sel = document.getElementById('col-select-1');
+        if (sel) updateValueField(sel, 'val-wrap-1', _uv1);
+      })();
+    </script>
   </div>
 </div>
 

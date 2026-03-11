@@ -14,7 +14,7 @@ UPLOAD_DIR = "uploads"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-SAMPLE_XLSX = os.path.join(BASE_DIR, "project_Max_data_20240826_14.xlsx")
+SAMPLE_XLSX = os.path.join(BASE_DIR, "Sample-Project-data-2025-end-004.xlsx")
 
 
 def _safe_excel_path(path: str) -> str:

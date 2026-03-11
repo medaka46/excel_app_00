@@ -3,11 +3,11 @@
   <div class="card-body">
     <p class="mb-2"><strong>Rows:</strong> {{ row_count }}</p>
     <p class="mb-2"><strong>Columns ({{ columns | length }}):</strong></p>
-    <ul class="list-group list-group-flush mb-3">
+    <div class="row row-cols-5 g-1 mb-3">
       {% for col in columns %}
-      <li class="list-group-item py-1" style="color: #0f0 !important;">{{ loop.index }}. {{ col }}</li>
+      <div class="col" style="color: #0f0 !important;">{{ loop.index }}. {{ col }}</div>
       {% endfor %}
-    </ul>
+    </div>
   </div>
 </div>
 
@@ -49,6 +49,18 @@
         </div>
       </div>
     </form>
+  </div>
+</div>
+
+<!-- Progress bar (shown while filtering) -->
+<div id="filter-progress-wrap" class="mb-3 d-none">
+  <div class="d-flex justify-content-between mb-1">
+    <small>Filtering data…</small>
+    <small id="filter-progress-pct">0%</small>
+  </div>
+  <div class="progress" style="height: 6px;">
+    <div id="filter-progress-bar" class="progress-bar progress-bar-striped progress-bar-animated"
+         role="progressbar" style="width: 0%"></div>
   </div>
 </div>
 

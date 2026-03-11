@@ -8,19 +8,21 @@
       hx-trigger="load,change"
     >
       <input type="hidden" name="saved_path" value="{{ saved_path }}">
+      <div class="d-flex flex-wrap gap-3">
       {% for name in sheet_names %}
-      <div class="form-check">
-        <input
-          class="form-check-input"
-          type="radio"
-          name="sheet_name"
-          id="sheet_{{ loop.index }}"
-          value="{{ name }}"
-          {% if loop.first %}checked{% endif %}
-        >
-        <label class="form-check-label" for="sheet_{{ loop.index }}">{{ name }}</label>
-      </div>
+        <div class="form-check">
+          <input
+            class="form-check-input"
+            type="radio"
+            name="sheet_name"
+            id="sheet_{{ loop.index }}"
+            value="{{ name }}"
+            {% if loop.first %}checked{% endif %}
+          >
+          <label class="form-check-label" for="sheet_{{ loop.index }}">{{ name }}</label>
+        </div>
       {% endfor %}
+      </div>
     </form>
   </div>
 </div>

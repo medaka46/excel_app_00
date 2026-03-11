@@ -2,7 +2,15 @@
 <div class="mb-3">
   <strong>Active filters:</strong>
   {% for f in active_filters %}
-  <span class="badge bg-secondary me-1">{{ f.col }} {{ f.op }} {{ f.val }}</span>
+  <button
+    class="badge bg-secondary border-0 me-1"
+    style="cursor:pointer;"
+    hx-post="/remove-filter"
+    hx-target="#results-section"
+    hx-swap="innerHTML"
+    hx-vals='{"saved_path": "{{ saved_path }}", "sheet_name": "{{ sheet_name }}", "filters": {{ filters_json | tojson }}, "index": {{ loop.index0 }}}'
+    title="Click to remove this filter"
+  >{{ f.col }} {{ f.op }} {{ f.val }} &times;</button>
   {% endfor %}
   <button
     class="btn btn-sm btn-outline-danger ms-2"
@@ -90,3 +98,81 @@
     {% endif %}
   </div>
 </div>
+
+<!-- Dot Plot -->
+<div class="card mb-4">
+  <div class="card-header fw-semibold">Dot Plot</div>
+  <div class="card-body">
+    <div class="row g-2 align-items-end mb-3">
+      <div class="col-md-4">
+        <label class="form-label mb-1">X Axis</label>
+        <select class="form-select" id="dot-x" onchange="drawDotPlot()">
+          {% for col in columns %}
+          <option value="{{ col }}">{{ col }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-4">
+        <label class="form-label mb-1">Y Axis</label>
+        <select class="form-select" id="dot-y" onchange="drawDotPlot()">
+          {% for col in columns %}
+          <option value="{{ col }}" {% if loop.index == 2 %}selected{% endif %}>{{ col }}</option>
+          {% endfor %}
+        </select>
+      </div>
+    </div>
+    <canvas id="dotPlotCanvas" style="max-height: 960px;"></canvas>
+  </div>
+</div>
+
+<script>
+  var _dotRows = {{ rows | tojson }};
+  var _dotChart = null;
+
+  function drawDotPlot() {
+    var xCol = document.getElementById('dot-x').value;
+    var yCol = document.getElementById('dot-y').value;
+    var data = [];
+    _dotRows.forEach(function (row) {
+      var x = parseFloat(row[xCol]);
+      var y = parseFloat(row[yCol]);
+      if (!isNaN(x) && !isNaN(y)) {
+        data.push({ x: x, y: y });
+      }
+    });
+    var ctx = document.getElementById('dotPlotCanvas').getContext('2d');
+    if (_dotChart) { _dotChart.destroy(); }
+    _dotChart = new Chart(ctx, {
+      type: 'scatter',
+      data: {
+        datasets: [{
+          label: xCol + ' vs ' + yCol,
+          data: data,
+          pointRadius: 4,
+          pointBackgroundColor: '#00ff00',
+          pointBorderColor: '#00ff00',
+        }]
+      },
+      options: {
+        responsive: true,
+        plugins: {
+          legend: { labels: { color: '#00ff00' } }
+        },
+        scales: {
+          x: {
+            title: { display: true, text: xCol, color: '#00ff00' },
+            ticks: { color: '#00ff00' },
+            grid: { color: 'rgba(0,255,0,0.15)' }
+          },
+          y: {
+            title: { display: true, text: yCol, color: '#00ff00' },
+            ticks: { color: '#00ff00' },
+            grid: { color: 'rgba(0,255,0,0.15)' }
+          }
+        }
+      }
+    });
+  }
+
+  drawDotPlot();
+</script>

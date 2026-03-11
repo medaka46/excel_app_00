@@ -120,7 +120,51 @@ async def sheet_info(
         "sheet_name": sheet_name,
         "columns": columns,
         "row_count": row_count,
-        "unique_vals": json.dumps(unique_vals),
+        "unique_vals": unique_vals,
+    })
+
+
+def _apply_filters(df, active_filters):
+    for f in active_filters:
+        col_data = df[f["col"]]
+        val = f["val"]
+        op = f["op"]
+        if op == "=":
+            df = df[col_data.astype(str) == val]
+        elif op == "!=":
+            df = df[col_data.astype(str) != val]
+        elif op == "contains":
+            df = df[col_data.astype(str).str.contains(val, case=False, na=False)]
+        elif op == ">":
+            df = df[pd.to_numeric(col_data, errors="coerce") > float(val)]
+        elif op == ">=":
+            df = df[pd.to_numeric(col_data, errors="coerce") >= float(val)]
+        elif op == "<":
+            df = df[pd.to_numeric(col_data, errors="coerce") < float(val)]
+        elif op == "<=":
+            df = df[pd.to_numeric(col_data, errors="coerce") <= float(val)]
+    return df
+
+
+def _filter_response(request, saved_path, sheet_name, active_filters, templates):
+    df = pd.read_excel(_safe_excel_path(saved_path), sheet_name=sheet_name)
+    all_columns = df.columns.tolist()
+    unique_vals = {
+        c: sorted(df[c].dropna().astype(str).unique().tolist())
+        for c in all_columns
+        if df[c].dropna().astype(str).nunique() <= 10
+    }
+    df = _apply_filters(df, active_filters)
+    return templates.TemplateResponse("partials/filter_results.html", {
+        "request": request,
+        "saved_path": _safe_excel_path(saved_path),
+        "sheet_name": sheet_name,
+        "columns": all_columns,
+        "active_filters": active_filters,
+        "filters_json": json.dumps(active_filters),
+        "unique_vals": unique_vals,
+        "rows": _df_to_json_rows(df),
+        "row_count": len(df),
     })
 
 
@@ -141,45 +185,23 @@ async def filter_rows(
 ):
     active_filters = json.loads(filters)
     active_filters.append({"col": col, "op": operator, "val": value})
+    return _filter_response(request, saved_path, sheet_name, active_filters, templates)
 
-    df = pd.read_excel(_safe_excel_path(saved_path), sheet_name=sheet_name)
-    all_columns = df.columns.tolist()
-    unique_vals = {
-        col: sorted(df[col].dropna().astype(str).unique().tolist())
-        for col in all_columns
-        if df[col].dropna().astype(str).nunique() <= 10
-    }
 
-    for f in active_filters:
-        col_data = df[f["col"]]
-        val = f["val"]
-        op = f["op"]
-        if op == "=":
-            df = df[col_data.astype(str) == val]
-        elif op == "!=":
-            df = df[col_data.astype(str) != val]
-        elif op == "contains":
-            df = df[col_data.astype(str).str.contains(val, case=False, na=False)]
-        elif op == ">":
-            df = df[pd.to_numeric(col_data, errors="coerce") > float(val)]
-        elif op == ">=":
-            df = df[pd.to_numeric(col_data, errors="coerce") >= float(val)]
-        elif op == "<":
-            df = df[pd.to_numeric(col_data, errors="coerce") < float(val)]
-        elif op == "<=":
-            df = df[pd.to_numeric(col_data, errors="coerce") <= float(val)]
-
-    return templates.TemplateResponse("partials/filter_results.html", {
-        "request": request,
-        "saved_path": _safe_excel_path(saved_path),
-        "sheet_name": sheet_name,
-        "columns": all_columns,
-        "active_filters": active_filters,
-        "filters_json": json.dumps(active_filters),
-        "unique_vals": json.dumps(unique_vals),
-        "rows": df.to_dict(orient="records"),
-        "row_count": len(df),
-    })
+@app.post("/remove-filter", response_class=HTMLResponse)
+async def remove_filter(
+    request: Request,
+    saved_path: str = Form(...),
+    sheet_name: str = Form(...),
+    filters: str = Form("[]"),
+    index: int = Form(...),
+):
+    active_filters = json.loads(filters)
+    if 0 <= index < len(active_filters):
+        active_filters.pop(index)
+    if not active_filters:
+        return HTMLResponse("")
+    return _filter_response(request, saved_path, sheet_name, active_filters, templates)
 
 
 @app.get("/api/sample/sheets", response_class=JSONResponse)

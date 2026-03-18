@@ -103,76 +103,59 @@
 <div class="card mb-4">
   <div class="card-header fw-semibold">Dot Plot</div>
   <div class="card-body">
-    <div class="row g-2 align-items-end mb-3">
-      <div class="col-md-4">
-        <label class="form-label mb-1">X Axis</label>
-        <select class="form-select" id="dot-x" onchange="drawDotPlot()">
-          {% for col in columns %}
-          <option value="{{ col }}">{{ col }}</option>
-          {% endfor %}
-        </select>
+    <form id="plot-form" hx-post="/plot" hx-target="#plot-div" hx-swap="innerHTML" hx-trigger="submit">
+      <input type="hidden" name="saved_path" value="{{ saved_path }}">
+      <input type="hidden" name="sheet_name" value="{{ sheet_name }}">
+      <input type="hidden" name="filters" value="{{ filters_json }}">
+      <div class="row g-2 align-items-end mb-3">
+        <div class="col-md-3">
+          <label class="form-label mb-1">X Axis</label>
+          <select class="form-select" id="dot-x" name="x_col">
+            {% for col in columns %}
+            <option value="{{ col }}" {% if col == default_x %}selected{% endif %}>{{ col }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-md-3">
+          <label class="form-label mb-1">Y Axis</label>
+          <select class="form-select" id="dot-y" name="y_col">
+            {% for col in columns %}
+            <option value="{{ col }}" {% if col == default_y %}selected{% endif %}>{{ col }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-md-2">
+          <label class="form-label mb-1">Hover</label>
+          <select class="form-select" id="dot-hover" name="hover_col">
+            {% for col in columns %}
+            <option value="{{ col }}" {% if col == 'Project Name' %}selected{% endif %}>{{ col }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-md-2">
+          <label class="form-label mb-1">Color</label>
+          <select class="form-select" id="dot-color" name="color_col">
+            <option value="">(none)</option>
+            {% for col in columns %}
+            <option value="{{ col }}">{{ col }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-md-2">
+          <button type="submit" class="btn btn-primary w-100">Draw</button>
+        </div>
       </div>
-      <div class="col-md-4">
-        <label class="form-label mb-1">Y Axis</label>
-        <select class="form-select" id="dot-y" onchange="drawDotPlot()">
-          {% for col in columns %}
-          <option value="{{ col }}" {% if loop.index == 2 %}selected{% endif %}>{{ col }}</option>
-          {% endfor %}
-        </select>
+    </form>
+    <div id="plot-progress-wrap" class="mb-3 d-none">
+      <div class="d-flex justify-content-between mb-1">
+        <small>Drawing chart…</small>
+        <small id="plot-progress-pct">0%</small>
+      </div>
+      <div class="progress" style="height: 6px;">
+        <div id="plot-progress-bar" class="progress-bar progress-bar-striped progress-bar-animated"
+             role="progressbar" style="width: 0%"></div>
       </div>
     </div>
-    <canvas id="dotPlotCanvas" style="max-height: 960px;"></canvas>
+    <div id="plot-div">{{ plot_html | safe }}</div>
   </div>
 </div>
-
-<script>
-  var _dotRows = {{ rows | tojson }};
-  var _dotChart = null;
-
-  function drawDotPlot() {
-    var xCol = document.getElementById('dot-x').value;
-    var yCol = document.getElementById('dot-y').value;
-    var data = [];
-    _dotRows.forEach(function (row) {
-      var x = parseFloat(row[xCol]);
-      var y = parseFloat(row[yCol]);
-      if (!isNaN(x) && !isNaN(y)) {
-        data.push({ x: x, y: y });
-      }
-    });
-    var ctx = document.getElementById('dotPlotCanvas').getContext('2d');
-    if (_dotChart) { _dotChart.destroy(); }
-    _dotChart = new Chart(ctx, {
-      type: 'scatter',
-      data: {
-        datasets: [{
-          label: xCol + ' vs ' + yCol,
-          data: data,
-          pointRadius: 4,
-          pointBackgroundColor: '#00ff00',
-          pointBorderColor: '#00ff00',
-        }]
-      },
-      options: {
-        responsive: true,
-        plugins: {
-          legend: { labels: { color: '#00ff00' } }
-        },
-        scales: {
-          x: {
-            title: { display: true, text: xCol, color: '#00ff00' },
-            ticks: { color: '#00ff00' },
-            grid: { color: 'rgba(0,255,0,0.15)' }
-          },
-          y: {
-            title: { display: true, text: yCol, color: '#00ff00' },
-            ticks: { color: '#00ff00' },
-            grid: { color: 'rgba(0,255,0,0.15)' }
-          }
-        }
-      }
-    });
-  }
-
-  drawDotPlot();
-</script>

@@ -2,6 +2,7 @@ import os
 import uuid
 import json
 import pandas as pd
+import plotly.graph_objects as go
 from datetime import date, datetime
 from fastapi import FastAPI, File, UploadFile, Form, Request, HTTPException, Query
 from fastapi.responses import HTMLResponse, JSONResponse
@@ -146,6 +147,68 @@ def _apply_filters(df, active_filters):
     return df
 
 
+DEFAULT_X = "TFA (m2)"
+DEFAULT_Y = "Cost (Oku)"
+
+
+COLORS = [
+    "#00ff00", "#00cfff", "#ff9900", "#ff4466", "#cc88ff",
+    "#ffff00", "#00ffcc", "#ff66cc", "#88ff00", "#0088ff",
+]
+
+
+def _build_plot_html(df, x_col, y_col, hover_col=None, color_col=None):
+    fig = go.Figure()
+
+    def _hover_tmpl(label):
+        if hover_col and hover_col in df.columns:
+            return f"{hover_col}: %{{text}}<br>{x_col}: %{{x}}<br>{y_col}: %{{y}}<extra>{label}</extra>"
+        return f"{x_col}: %{{x}}<br>{y_col}: %{{y}}<extra>{label}</extra>"
+
+    if color_col and color_col in df.columns:
+        groups = df[color_col].astype(str).unique()
+        for i, grp in enumerate(sorted(groups)):
+            sub = df[df[color_col].astype(str) == grp]
+            hover_text = sub[hover_col].astype(str).tolist() if hover_col and hover_col in df.columns else None
+            fig.add_trace(go.Scatter(
+                x=pd.to_numeric(sub[x_col], errors="coerce"),
+                y=pd.to_numeric(sub[y_col], errors="coerce"),
+                mode="markers",
+                marker=dict(color=COLORS[i % len(COLORS)], size=8, opacity=0.8),
+                name=grp,
+                text=hover_text,
+                hovertemplate=_hover_tmpl(grp),
+            ))
+    else:
+        hover_text = df[hover_col].astype(str).tolist() if hover_col and hover_col in df.columns else None
+        fig.add_trace(go.Scatter(
+            x=pd.to_numeric(df[x_col], errors="coerce"),
+            y=pd.to_numeric(df[y_col], errors="coerce"),
+            mode="markers",
+            marker=dict(color="#00ff00", size=8, opacity=0.8),
+            name=f"{x_col} vs {y_col}",
+            text=hover_text,
+            hovertemplate=_hover_tmpl(f"{x_col} vs {y_col}"),
+        ))
+    fig.update_layout(
+        paper_bgcolor="rgba(0,0,0,0)",
+        plot_bgcolor="rgba(0,0,0,0)",
+        font=dict(color="#00ff00"),
+        xaxis=dict(
+            title=x_col, color="#00ff00",
+            gridcolor="rgba(0,255,0,0.15)", zerolinecolor="rgba(0,255,0,0.3)",
+        ),
+        yaxis=dict(
+            title=y_col, color="#00ff00",
+            gridcolor="rgba(0,255,0,0.15)", zerolinecolor="rgba(0,255,0,0.3)",
+        ),
+        legend=dict(font=dict(color="#00ff00")),
+        margin=dict(l=60, r=20, t=20, b=60),
+        height=500,
+    )
+    return fig.to_html(full_html=False, include_plotlyjs=False)
+
+
 def _filter_response(request, saved_path, sheet_name, active_filters, templates):
     df = pd.read_excel(_safe_excel_path(saved_path), sheet_name=sheet_name)
     all_columns = df.columns.tolist()
@@ -155,6 +218,8 @@ def _filter_response(request, saved_path, sheet_name, active_filters, templates)
         if df[c].dropna().astype(str).nunique() <= 10
     }
     df = _apply_filters(df, active_filters)
+    x_col = DEFAULT_X if DEFAULT_X in all_columns else all_columns[0]
+    y_col = DEFAULT_Y if DEFAULT_Y in all_columns else (all_columns[1] if len(all_columns) > 1 else all_columns[0])
     return templates.TemplateResponse("partials/filter_results.html", {
         "request": request,
         "saved_path": _safe_excel_path(saved_path),
@@ -165,6 +230,9 @@ def _filter_response(request, saved_path, sheet_name, active_filters, templates)
         "unique_vals": unique_vals,
         "rows": _df_to_json_rows(df),
         "row_count": len(df),
+        "plot_html": "",
+        "default_x": x_col,
+        "default_y": y_col,
     })
 
 
@@ -226,3 +294,19 @@ async def api_sample_sheet(
         "row_count": int(len(df)),
         "rows": _df_to_json_rows(df),
     }
+
+
+@app.post("/plot", response_class=HTMLResponse)
+async def plot(
+    saved_path: str = Form(...),
+    sheet_name: str = Form(...),
+    filters: str = Form("[]"),
+    x_col: str = Form(...),
+    y_col: str = Form(...),
+    hover_col: str = Form(None),
+    color_col: str = Form(None),
+):
+    df = pd.read_excel(_safe_excel_path(saved_path), sheet_name=sheet_name)
+    active_filters = json.loads(filters)
+    df = _apply_filters(df, active_filters)
+    return HTMLResponse(_build_plot_html(df, x_col, y_col, hover_col, color_col or None))

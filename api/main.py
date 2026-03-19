@@ -9,13 +9,30 @@ from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
 
 app = FastAPI()
-templates = Jinja2Templates(directory="templates")
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+PROJECT_ROOT = os.path.abspath(os.path.join(BASE_DIR, ".."))
+templates = Jinja2Templates(directory=os.path.join(PROJECT_ROOT, "templates"))
 
-UPLOAD_DIR = "uploads"
+UPLOAD_DIR = os.path.join(BASE_DIR, "uploads")
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-SAMPLE_XLSX = os.path.join(BASE_DIR, "Sample-Project-data-2025-end-004.xlsx")
+SAMPLE_XLSX_NAME = "Sample-Project-data-2025-end-004.xlsx"
+
+
+def _resolve_sample_path() -> str:
+    """Support sample file placed in api/ or project root."""
+    candidates = [
+        os.path.join(BASE_DIR, SAMPLE_XLSX_NAME),
+        os.path.join(PROJECT_ROOT, SAMPLE_XLSX_NAME),
+    ]
+    for path in candidates:
+        if os.path.exists(path):
+            return path
+    # Fall back to api/ path so callers get a clear 404 from _safe_excel_path
+    return candidates[0]
+
+
+SAMPLE_XLSX = _resolve_sample_path()
 
 
 def _safe_excel_path(path: str) -> str:
@@ -30,7 +47,8 @@ def _safe_excel_path(path: str) -> str:
     abs_path = os.path.abspath(path)
     allowed_roots = [
         os.path.abspath(BASE_DIR),
-        os.path.abspath(os.path.join(BASE_DIR, UPLOAD_DIR)),
+        os.path.abspath(UPLOAD_DIR),
+        os.path.abspath(os.path.dirname(SAMPLE_XLSX)),
     ]
     if not any(abs_path == r or abs_path.startswith(r + os.sep) for r in allowed_roots):
         raise HTTPException(status_code=400, detail="Path is not allowed")

@@ -1,0 +1,7 @@
+# Optional: connect repo via Render Blueprint, or copy startCommand into your Web Service settings.
+services:
+  - type: web
+    name: excel-app-00
+    runtime: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn api.main:app --host 0.0.0.0 --port $PORT

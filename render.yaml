@@ -3,6 +3,5 @@ services:
   - type: web
     name: excel-app-00
     runtime: python
-    pythonVersion: "3.11.0"
     buildCommand: pip install -r requirements.txt
-    startCommand: uvicorn api.main:app --host 0.0.0.0 --port $PORT
+    startCommand: uvicorn api.main:app 

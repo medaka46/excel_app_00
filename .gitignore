@@ -1,5 +1,0 @@
-uploads/
-__pycache__/
-*.pyc
-.DS_Store
-make_sample_db.py
